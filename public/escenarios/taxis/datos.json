@@ -1,0 +1,107 @@
+{
+ "ancho": 684,
+ "alto": 1024,
+ "yMesa": 615,
+ "mesa": "madera",
+ "jugadores": [
+  {
+   "caja": [
+    2,
+    287,
+    347,
+    672
+   ],
+   "cara": [
+    111,
+    312,
+    108,
+    100
+   ],
+   "poses": {
+    "baja": {
+     "caja": [
+      4,
+      285,
+      346,
+      720
+     ],
+     "cara": [
+      114,
+      310,
+      110,
+      102
+     ],
+     "fondo": "fondo0-baja.jpg",
+     "altoFondo": 692
+    },
+    "gana": {
+     "caja": [
+      2,
+      239,
+      397,
+      669
+     ],
+     "cara": [
+      110,
+      310,
+      112,
+      103
+     ],
+     "fondo": "fondo0-gana.jpg",
+     "altoFondo": 692
+    }
+   }
+  },
+  {
+   "caja": [
+    378,
+    304,
+    682,
+    681
+   ],
+   "cara": [
+    507,
+    329,
+    106,
+    99
+   ],
+   "poses": {
+    "baja": {
+     "caja": [
+      314,
+      304,
+      682,
+      746
+     ],
+     "cara": [
+      506,
+      328,
+      106,
+      99
+     ],
+     "fondo": "fondo1-baja.jpg",
+     "altoFondo": 701
+    },
+    "gana": {
+     "caja": [
+      305,
+      227,
+      682,
+      695
+     ],
+     "cara": [
+      506,
+      326,
+      103,
+      96
+     ],
+     "fondo": "fondo1-gana.jpg",
+     "altoFondo": 701
+    }
+   }
+  }
+ ],
+ "nombre": "Sitio de taxis",
+ "orden": 1,
+ "luzCara": "brightness(.92) contrast(1.05) saturate(.9)"
+}

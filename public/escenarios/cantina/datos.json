@@ -1,0 +1,107 @@
+{
+ "ancho": 684,
+ "alto": 1024,
+ "yMesa": 612,
+ "mesa": "fieltro",
+ "jugadores": [
+  {
+   "caja": [
+    2,
+    263,
+    323,
+    651
+   ],
+   "cara": [
+    98,
+    289,
+    111,
+    101
+   ],
+   "poses": {
+    "baja": {
+     "caja": [
+      2,
+      263,
+      487,
+      725
+     ],
+     "cara": [
+      99,
+      284,
+      121,
+      110
+     ],
+     "fondo": "fondo0-baja.jpg",
+     "altoFondo": 672
+    },
+    "gana": {
+     "caja": [
+      2,
+      192,
+      400,
+      676
+     ],
+     "cara": [
+      103,
+      292,
+      103,
+      93
+     ],
+     "fondo": "fondo0-gana.jpg",
+     "altoFondo": 672
+    }
+   }
+  },
+  {
+   "caja": [
+    437,
+    256,
+    682,
+    675
+   ],
+   "cara": [
+    467,
+    287,
+    142,
+    124
+   ],
+   "poses": {
+    "baja": {
+     "caja": [
+      245,
+      256,
+      682,
+      694
+     ],
+     "cara": [
+      459,
+      290,
+      134,
+      117
+     ],
+     "fondo": "fondo1-baja.jpg",
+     "altoFondo": 695
+    },
+    "gana": {
+     "caja": [
+      315,
+      163,
+      682,
+      669
+     ],
+     "cara": [
+      468,
+      295,
+      124,
+      109
+     ],
+     "fondo": "fondo1-gana.jpg",
+     "altoFondo": 695
+    }
+   }
+  }
+ ],
+ "nombre": "Cantina",
+ "orden": 3,
+ "luzCara": "brightness(.9) sepia(.18) saturate(1.05)"
+}

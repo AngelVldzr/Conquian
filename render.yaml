@@ -1,0 +1,12 @@
+# Configuración para publicar en Render (https://render.com) con HTTPS automático.
+services:
+  - type: web
+    name: conquian
+    runtime: node
+    plan: free
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
+    healthCheckPath: /salud
+    envVars:
+      - key: NODE_ENV
+        value: production

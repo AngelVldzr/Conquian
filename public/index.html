@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1b120c">
+  <title>Conquián con los cuates</title>
+  <link rel="stylesheet" href="style.css?v=20">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🃏</text></svg>">
+</head>
+<body>
+  <!-- La foto del lugar (con la mesa y los jugadores de la foto) -->
+  <div id="escena">
+    <div id="lados"></div>
+    <div id="foto">
+      <img id="plato" alt="">
+      <div id="asientos"></div>
+      <div id="sobre-mesa"></div>
+      <div id="bote-mesa"></div>
+    </div>
+  </div>
+
+  <!-- Pantalla de inicio -->
+  <section id="inicio" class="panel-inicio">
+    <h1>Conquián <span>con los cuates</span></h1>
+    <p class="sub">Baraja española · 2 a 4 jugadores</p>
+    <label>Tu nombre <input id="nombre" maxlength="16" placeholder="Ej. Isaac" autocomplete="nickname"></label>
+    <div class="selfie">
+      <span id="vista-foto" class="retrato grande">🙂</span>
+      <div class="selfie-txt">
+        <b>Tu cara en el juego</b> <small>(opcional)</small>
+        <div class="selfie-btns">
+          <label class="chip">🤳 Tomar selfie<input id="foto-camara" type="file" accept="image/*" capture="user" hidden></label>
+          <label class="chip">🖼️ Subir foto<input id="foto-archivo" type="file" accept="image/*" hidden></label>
+          <button id="quitar-foto" class="chip oculto" type="button">Quitar</button>
+        </div>
+      </div>
+    </div>
+    <label>¿Con cuánto entras? <small>(1 crédito = $1, escribe la cantidad que quieras)</small>
+      <input id="creditos" type="number" inputmode="numeric" min="10" max="100000" step="10" value="200">
+    </label>
+    <div class="atajos-creditos">
+      <button type="button" class="chip" data-creditos="50">$50</button>
+      <button type="button" class="chip" data-creditos="100">$100</button>
+      <button type="button" class="chip activo" data-creditos="200">$200</button>
+      <button type="button" class="chip" data-creditos="500">$500</button>
+      <button type="button" class="chip" data-creditos="1000">$1000</button>
+    </div>
+    <div class="dos">
+      <div class="bloque">
+        <h2>Abrir mesa</h2>
+        <label>Apuesta por mano
+          <select id="apuesta"><option>5</option><option selected>10</option><option>20</option><option>50</option></select>
+        </label>
+        <label class="regla"><input type="checkbox" id="regla-figuras"><span>Regla callejera: si alguien baja tercia de <b>1</b> o de <b>12</b>, se vota para <b>subir la apuesta</b> (solo si todos aceptan)</span></label>
+        <button id="btn-crear" class="btn oro">Crear mesa</button>
+      </div>
+      <div class="bloque">
+        <h2>Unirme</h2>
+        <label>Código de la mesa <input id="codigo" maxlength="5" placeholder="ABCDE" autocapitalize="characters"></label>
+        <button id="btn-unirse" class="btn">Sentarme</button>
+      </div>
+    </div>
+    <p class="nota">Al cerrar la mesa, el juego te dice quién le debe cuánto a quién. El juego <b>no procesa ni guarda dinero real</b>: si se quieren pagar, es entre ustedes.</p>
+    <p class="nota legal">Solo para mayores de 18 años. Juega con responsabilidad. Tu nombre y tu selfie solo los ven quienes están en tu mesa y se borran del servidor al cerrarla.</p>
+  </section>
+
+  <!-- Mesa de juego -->
+  <section id="juego" class="oculto">
+    <div id="votacion" class="oculto"></div>
+    <div id="cuentas" class="oculto"></div>
+
+    <div id="mi-zona">
+      <img id="mi-mano" src="manos/mi-mano.png" alt="" draggable="false">
+      <div id="abanico"></div>
+      <img id="mi-pulgar" src="manos/mi-pulgar.png" alt="" draggable="false">
+    </div>
+
+
+    <div id="mi-placa"></div>
+    <button id="btn-ordenar" class="chip oculto" type="button" title="Acomoda tus cartas"></button>
+    <!-- Lo de arriba en el celular (en PC cada cosa va a un costado) -->
+    <div id="hud">
+      <div id="instruccion"></div>
+      <div id="esperando"></div>
+      <div id="barra"></div>
+      <div id="bandeja" class="oculto"></div>
+    </div>
+
+
+    <div id="arriba-izq">
+      <button id="btn-codigo" class="chip" title="Copiar invitación"></button>
+    </div>
+    <details id="menu">
+      <summary class="chip">☰ Menú</summary>
+      <div class="menu-panel">
+        <label>Escenario <select id="sel-escenario" aria-label="Escenario"></select></label>
+        <label class="chip" title="Cambiar la foto de tu personaje">🤳 Cambiar mi cara<input id="foto-juego" type="file" accept="image/*" hidden></label>
+        <button id="btn-anular" class="chip oculto">Anular mano</button>
+        <button id="btn-finalizar" class="chip oculto">🏁 Cerrar mesa y hacer cuentas</button>
+        <div class="historial"><b>Historial</b><ol id="log"></ol></div>
+        <div class="creditos-baraja">Baraja: foto "Spanish deck Fournier" (Wikimedia Commons), diseño clásico de la baraja española.</div>
+      </div>
+    </details>
+    <div id="resultado" class="oculto"></div>
+  </section>
+
+  <div id="toast"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="cartas.js?v=20"></script>
+  <script src="escenarios.js?v=20"></script>
+  <script src="app.js?v=20"></script>
+</body>
+</html>
