@@ -2,15 +2,16 @@
 // =============================================================
 //  Métricas anónimas con PostHog (lado del servidor)
 //
-//  - Solo se activa si existe la variable POSTHOG_KEY (en tu compu no manda nada).
+//  - Solo se activa si existen POSTHOG_KEY y POSTHOG_HOST (en tu compu no manda nada).
 //  - A PostHog NUNCA se le manda: nombres, selfies, chat, la llave secreta, ni la IP.
 //    Cada navegador se identifica con un "id de visitante" al azar que no dice quién eres.
 //  - Los eventos se juntan y se mandan en paquetes cada 10 s (no frena el juego).
 //  - Si PostHog falla o está caído, el juego sigue igual: los errores se ignoran.
 // =============================================================
 
+const registrosPostHog = require('./posthog-logs');
 const CLAVE = process.env.POSTHOG_KEY || '';
-const HOST = (process.env.POSTHOG_HOST || 'https://us.i.posthog.com').replace(/\/+$/, '');
+const HOST = (process.env.POSTHOG_HOST || '').replace(/\/+$/, '');
 const MAX_COLA = 1000;          // si PostHog no contesta, no se acumula memoria sin fin
 const CADA_MS = 10_000;
 
@@ -21,7 +22,7 @@ let enviar = (url, opciones) => fetch(url, opciones);   // se puede cambiar en l
 const esVisitante = (v) => typeof v === 'string' && /^[A-Za-z0-9_-]{16,64}$/.test(v);
 
 function capturar(visitante, evento, propiedades = {}) {
-  if (!CLAVE && !module.exports._forzar) return;
+  if ((!CLAVE || !HOST) && !module.exports._forzar) return;
   if (!esVisitante(visitante)) return;
   if (cola.length >= MAX_COLA) cola.shift();
   cola.push({
@@ -58,11 +59,14 @@ async function vaciar() {
 
 // Al apagar el servidor (Render manda SIGTERM al publicar) se manda lo pendiente
 for (const senal of ['SIGTERM', 'SIGINT']) {
-  process.once(senal, () => { vaciar().finally(() => process.exit(0)); });
+  process.once(senal, async () => {
+    await Promise.allSettled([vaciar(), registrosPostHog.apagar()]);
+    process.exit(0);
+  });
 }
 
 module.exports = {
-  activo: () => Boolean(CLAVE),
+  activo: () => Boolean(CLAVE && HOST),
   capturar,
   vaciar,
   esVisitante,
