@@ -96,6 +96,26 @@ Si quieres revisar que las reglas no se traban, corre `npm test`. Juega 3,000 ma
 > El plan gratis "se duerme" tras ~15 min sin uso; la primera visita tarda ~50 s en despertar.
 > ¿Dominio propio? Agrégalo en Render (*Settings → Custom Domain*) y en la variable `ALLOWED_ORIGINS`.
 
+## 3.1 Métricas con PostHog (opcional)
+
+Para saber cuánta gente llega, si juega, si comparte y si **regresa** (retención).
+
+1. Crea una cuenta gratis en **https://posthog.com** (región US) y un proyecto. Copia la **Project API key** (empieza con `phc_`).
+2. En Render → tu servicio → **Environment** → agrega `POSTHOG_KEY` = esa llave (y `POSTHOG_HOST` = `https://us.i.posthog.com`, o `https://eu.i.posthog.com` si elegiste Europa). Guarda: Render reinicia solo.
+3. Juega una mano y en PostHog → **Activity** verás llegar los eventos (tardan ~10 s).
+
+| Evento | Qué te dice |
+|---|---|
+| `visita` | Cuánta gente llega (`por_invitacion` = llegó con link de alguien) |
+| `sala_creada` | Cuántos se animan a jugar |
+| `invitacion_enviada` | Si el juego se comparte solo |
+| `se_unio_a_mesa` | Cuántas invitaciones sí se convierten en jugador |
+| `partida_iniciada` / `partida_terminada` / `partida_abandonada` | Si las terminan o las dejan a medias (y por qué) |
+| `jugador_regresa` | Volvió otro día (`dias`, `dia_1`, `dia_7`) |
+| `mesa_cerrada` | Cuántas manos jugaron y cuánto duró la mesa |
+
+**Privacidad:** a PostHog solo le llega un id de visitante al azar. Nunca nombres, selfies, chat, códigos de mesa, la llave secreta ni la IP. Si el navegador tiene "No rastrear" activado, no se manda nada. Sin `POSTHOG_KEY` (por ejemplo en tu compu) no se manda nada.
+
 ## 4. Agregar un escenario nuevo
 
 Necesitas una foto **vertical** (como las de referencia, ~684×1024) con **dos personas sentadas a una mesa** y la mesa al frente. Las cartas que haya en la mesa se borran solas.
@@ -138,6 +158,7 @@ public/escenarios/<lugar>/    → foto, jugadores recortados y datos de cada lug
 public/manos/                 → tu mano y tu pulgar (fotos recortadas)
 herramientas/preparar_escena.py → convierte una foto en escenario
 test/simular.js               → pruebas con bots
+game/metricas.js              → métricas anónimas para PostHog
 ```
 
 ## Seguridad

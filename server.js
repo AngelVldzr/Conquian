@@ -19,6 +19,7 @@ const fs = require('fs');
 const { Server } = require('socket.io');
 const { Mano } = require('./game/conquian');
 const { hacerCuentas } = require('./game/cuentas');
+const metricas = require('./game/metricas');
 
 const PUERTO = process.env.PORT || 3000;
 const PRODUCCION = process.env.NODE_ENV === 'production';
@@ -211,6 +212,7 @@ function cobrar(sala, id) {
 
 // Cerrar la mesa: si quedó bote (por empates), se le regresa a cada quien lo que puso
 function finalizar(sala) {
+  manoAbandonada(sala, 'mesa_cerrada');
   if (sala.mano && sala.mano.fase !== 'fin') sala.mano.anular();
   for (const [id, monto] of Object.entries(sala.aportes)) {
     const j = jugadorDe(sala, id);
@@ -224,7 +226,36 @@ function finalizar(sala) {
   // las selfies ya no hacen falta: se borran de la memoria del servidor
   for (const j of sala.jugadores) j.foto = null;
   emitirFotos(sala);
+  metricaJugadores(sala, sala.jugadores.map((j) => j.id), 'mesa_cerrada', {
+    manos: sala.numMano,
+    en_mesa: sala.jugadores.length,
+    duracion_min: Math.round((Date.now() - sala.creada) / 60000),
+  });
   programarBorrado(sala, 30 * 60 * 1000);
+}
+
+// ---------- Métricas (anónimas: solo el id de visitante, nunca nombres) ----------
+function metricaJugadores(sala, ids, evento, props) {
+  for (const id of ids) {
+    const j = jugadorDe(sala, id);
+    if (j?.visitante) metricas.capturar(j.visitante, evento, typeof props === 'function' ? props(id) : props);
+  }
+}
+function datosMano(sala) {
+  return {
+    jugadores: sala.mano?.activos.length || 0,
+    en_mesa: sala.jugadores.length,
+    mano_num: sala.numMano,
+    escenario: sala.escenario,
+    apuesta: sala.apuesta,
+    duracion_seg: sala.inicioMano ? Math.round((Date.now() - sala.inicioMano) / 1000) : null,
+  };
+}
+// La mano se quedó a medias (la anularon, cerraron la mesa o todos se fueron)
+function manoAbandonada(sala, motivo) {
+  if (!sala.mano || sala.mano.fase === 'fin' || sala.reporteMano === sala.numMano) return;
+  sala.reporteMano = sala.numMano;
+  metricaJugadores(sala, sala.mano.activos, 'partida_abandonada', { ...datosMano(sala), motivo });
 }
 
 function procesarEventos(sala) {
@@ -240,6 +271,13 @@ function procesarEventos(sala) {
     }
     if (e.tipo === 'empate') { sala.resultado = { tipo: 'empate', bote: sala.bote }; sala.propuesta = null; }
     if (e.tipo === 'gana') sala.propuesta = null;
+    if ((e.tipo === 'gana' || e.tipo === 'empate') && sala.reporteMano !== sala.numMano) {
+      sala.reporteMano = sala.numMano;
+      metricaJugadores(sala, sala.mano.activos, 'partida_terminada', (id) => ({
+        ...datosMano(sala),
+        resultado: e.tipo === 'empate' ? 'empate' : e.id === id ? 'gano' : 'perdio',
+      }));
+    }
     // Regla opcional: tercia de 1 o de 12 -> se vota si se sube la apuesta
     if (e.tipo === 'figuras' && sala.reglas.subirConFiguras && !sala.propuesta && sala.mano.fase !== 'fin') {
       const quien = jugadorDe(sala, e.id)?.nombre || '¿?';
@@ -286,9 +324,11 @@ function repartir(sala) {
     rng: () => crypto.randomInt(1 << 30) / (1 << 30),   // barajeo con números aleatorios seguros
   });
   sala.numMano++;
+  sala.inicioMano = Date.now();
   sala.resultado = null;
   sala.propuesta = null;
   for (const id of activos) cobrar(sala, id);
+  metricaJugadores(sala, activos, 'partida_iniciada', datosMano(sala));
 }
 
 // Lo que ve cada jugador: SOLO ids públicos y SOLO sus propias cartas
@@ -320,7 +360,7 @@ function emitirEstado(sala) {
 
 function programarBorrado(sala, ms) {
   clearTimeout(sala.borrar);
-  sala.borrar = setTimeout(() => salas.delete(sala.codigo), ms);
+  sala.borrar = setTimeout(() => { manoAbandonada(sala, 'se_fueron'); salas.delete(sala.codigo); }, ms);
 }
 
 // Sienta al jugador: si su LLAVE ya está en la mesa, recupera su lugar; si no, entra nuevo
@@ -346,6 +386,7 @@ function sentar(socket, sala, { nombre, llave, foto, creditos }) {
   if (socket.data.sala && socket.data.sala !== sala.codigo) socket.leave(socket.data.sala);
   socket.data.sala = sala.codigo;
   socket.data.id = j.id;
+  if (socket.data.visitante) j.visitante = socket.data.visitante;
   clearTimeout(sala.borrar);
   socket.join(sala.codigo);
   emitirFotos(sala);
@@ -355,6 +396,21 @@ function sentar(socket, sala, { nombre, llave, foto, creditos }) {
 
 io.on('connection', (socket) => {
   const ip = ipDe(socket.request);
+
+  // Métricas: el navegador manda un id de visitante al azar (no es la llave ni dice quién eres).
+  // Si el navegador pide "no rastrear", no se manda nada.
+  const auth = socket.handshake.auth && typeof socket.handshake.auth === 'object' ? socket.handshake.auth : {};
+  socket.data.visitante = auth.nt !== true && metricas.esVisitante(auth.v) ? auth.v : null;
+  if (socket.data.visitante && auth.nueva === true) {   // solo al abrir la página, no al reconectar
+    metricas.capturar(socket.data.visitante, 'visita', {
+      por_invitacion: auth.inv === true,
+      pantalla: auth.pantalla === 'pc' ? 'pc' : 'celular',
+    });
+    const dias = Number(auth.regreso);
+    if (Number.isInteger(dias) && dias >= 1 && dias <= 3650) {
+      metricas.capturar(socket.data.visitante, 'jugador_regresa', { dias, dia_1: dias === 1, dia_7: dias === 7 });
+    }
+  }
 
   // Corre la acción; los errores del juego se le muestran al jugador, los demás se esconden
   const responder = (cb, fn) => {
@@ -401,6 +457,7 @@ io.on('connection', (socket) => {
       const j = sentar(socket, sala, datos);
       sala.hostId = j.id;
       salas.set(sala.codigo, sala);
+      metricas.capturar(socket.data.visitante, 'sala_creada', { apuesta, regla_subir: sala.reglas.subirConFiguras, creditos: j.inicial });
       programarBorrado(sala, 12 * 60 * 60 * 1000);   // ninguna mesa vive más de 12 horas
       emitirEstado(sala);
       return { codigo: sala.codigo };
@@ -417,7 +474,11 @@ io.on('connection', (socket) => {
         if (!limiteIntentosCodigo(ip)) falla('Demasiados intentos; espera un momento');
         falla('No existe una mesa con ese código');
       }
+      const antes = sala.jugadores.length;
       sentar(socket, sala, datos);
+      if (sala.jugadores.length > antes) {
+        metricas.capturar(socket.data.visitante, 'se_unio_a_mesa', { en_mesa: sala.jugadores.length, por_link: datos.porLink === true });
+      }
       emitirEstado(sala);
       return { codigo: sala.codigo };
     })
@@ -449,6 +510,7 @@ io.on('connection', (socket) => {
         case 'anular':
           if (!esHost) falla('Solo el anfitrión puede anular');
           if (!m || m.fase === 'fin') falla('No hay mano en juego');
+          manoAbandonada(sala, 'anulada');
           m.anular();
           break;
         case 'cambio':
@@ -508,6 +570,15 @@ io.on('connection', (socket) => {
     sala.chat = [...(sala.chat || []), msg].slice(-MAX_HISTORIAL_CHAT);
     io.to(sala.codigo).emit('chat', msg);
     responderChat({ ok: true });
+  });
+
+  // Lo único que el navegador puede reportar por su cuenta: que compartió la invitación
+  socket.on('metrica', (tipo, extra) => {
+    if (!limiteAcciones(socket.id) || tipo !== 'invitacion_enviada') return;
+    const sala = salas.get(socket.data.sala);
+    if (!sala || !jugadorDe(sala, socket.data.id)) return;
+    const medio = extra && ['compartir', 'copiar'].includes(extra.medio) ? extra.medio : 'otro';
+    metricas.capturar(socket.data.visitante, 'invitacion_enviada', { medio, en_mesa: sala.jugadores.length, ya_jugando: Boolean(sala.mano) });
   });
 
   socket.on('escenario', (nombre) => {

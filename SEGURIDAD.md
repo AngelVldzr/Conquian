@@ -21,6 +21,7 @@ Resumen de la revisión de seguridad y de cómo mantener la app segura.
   - Solo los ve la gente de tu mesa.
   - Se borran al cerrar la mesa, cuando un jugador sale antes de repartir, o cuando la mesa se borra: a los 30 minutos sin nadie conectado, o a las 12 horas como máximo.
 - **Chat:** cada mensaje se limpia (máximo 200 caracteres, sin caracteres invisibles), hay un límite de mensajes seguidos por persona, y en pantalla se muestran siempre como texto, nunca como código (aunque alguien escriba `<script>`, sale tal cual). Solo lo ven los de la mesa, se guardan los últimos 50 y se borran junto con la mesa.
+- **Métricas (PostHog):** las manda el servidor, no el navegador (no hay scripts de terceros en la página ni cookies). Solo llevan un id de visitante al azar y datos del juego (cuántos jugadores, duración, quién ganó como "ganó/perdió"). Nunca nombres, selfies, chat, códigos de mesa, llaves ni IP. Se respeta "No rastrear" / Global Privacy Control. La llave de PostHog va en una variable de entorno, nunca en el código.
 - **El barajeo usa números aleatorios seguros** del sistema, que no se pueden predecir.
 - **Dinero:** el juego no procesa ni guarda dinero real; solo calcula las cuentas. La pantalla de inicio avisa que es para mayores de 18 años.
 

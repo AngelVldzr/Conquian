@@ -10,3 +10,8 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Métricas con PostHog (opcional). El valor se pone en Render → Environment, no aquí.
+      - key: POSTHOG_KEY
+        sync: false
+      - key: POSTHOG_HOST
+        value: https://us.i.posthog.com

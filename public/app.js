@@ -2,8 +2,45 @@
 //  Cliente: dibuja la mesa desde tu punto de vista y manda
 //  tus jugadas al servidor. El servidor decide si son válidas.
 // =============================================================
-const socket = io();
 const $ = (s) => document.querySelector(s);
+
+// ---------- Métricas anónimas ----------
+// Un id de visitante al azar (NO es tu llave ni dice quién eres) para contar visitas y si la gente regresa.
+// Si el navegador tiene activado "No rastrear" / "Global Privacy Control", no se manda nada.
+const sinRastreo = navigator.globalPrivacyControl === true || navigator.doNotTrack === '1';
+function datosVisitante() {
+  const leer = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
+  const guardar = (k, v) => { try { localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } };
+  let v = leer('conquian-visitante');
+  if (!v || !/^[A-Za-z0-9_-]{16,64}$/.test(v)) {
+    const b = new Uint8Array(16); crypto.getRandomValues(b);
+    v = Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+    guardar('conquian-visitante', v);
+  }
+  // ¿Cuántos días han pasado desde su primera visita? (solo se avisa 1 vez por día)
+  const hoy = new Date().toLocaleDateString('en-CA');            // AAAA-MM-DD
+  const primera = leer('conquian-primera') || hoy;
+  const ultima = leer('conquian-ultima');
+  guardar('conquian-primera', primera);
+  guardar('conquian-ultima', hoy);
+  const dias = Math.round((new Date(hoy) - new Date(primera)) / 86400000);
+  return { v, regreso: ultima && ultima !== hoy && dias >= 1 ? dias : null };
+}
+const visitante = sinRastreo ? { v: null, regreso: null } : datosVisitante();
+let primeraConexion = true;
+const socket = io({
+  auth: (cb) => {
+    cb({
+      v: visitante.v,
+      nt: sinRastreo,
+      nueva: primeraConexion,          // al reconectar no cuenta como visita nueva
+      regreso: visitante.regreso,
+      inv: new URLSearchParams(location.search).has('sala'),
+      pantalla: window.matchMedia('(min-aspect-ratio: 1/1)').matches ? 'pc' : 'celular',
+    });
+    primeraConexion = false;
+  },
+});
 const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // Tu LLAVE secreta: solo la tiene este navegador y sirve para recuperar tu lugar en la mesa.
@@ -123,7 +160,7 @@ $('#btn-unirse').onclick = () => {
   const codigo = $('#codigo').value.trim().toUpperCase();
   if (!nombre) return;
   if (codigo.length !== 5) return toast('El código tiene 5 letras');
-  socket.emit('unirse', { codigo, nombre, creditos: leerCreditos(), llave: miLlave, foto: miFoto }, entrar);
+  socket.emit('unirse', { codigo, nombre, creditos: leerCreditos(), llave: miLlave, foto: miFoto, porLink: params.get('sala') === codigo }, entrar);
 };
 
 function entrar(r) {
@@ -719,8 +756,14 @@ $('#btn-codigo').onclick = async () => {
   const link = `${location.origin}/?sala=${estado.sala.codigo}`;
   const texto = `¡Vente a jugar Conquián! Mesa ${estado.sala.codigo}: ${link}`;
   try {
-    if (navigator.share) await navigator.share({ title: 'Conquián', text: texto, url: link });
-    else { await navigator.clipboard.writeText(texto); toast('Invitación copiada', 'ok'); }
+    if (navigator.share) {
+      await navigator.share({ title: 'Conquián', text: texto, url: link });
+      socket.emit('metrica', 'invitacion_enviada', { medio: 'compartir' });
+    } else {
+      await navigator.clipboard.writeText(texto);
+      toast('Invitación copiada', 'ok');
+      socket.emit('metrica', 'invitacion_enviada', { medio: 'copiar' });
+    }
   } catch { /* cancelado */ }
 };
 
