@@ -20,6 +20,7 @@ const { Server } = require('socket.io');
 const { Mano } = require('./game/conquian');
 const { hacerCuentas } = require('./game/cuentas');
 const metricas = require('./game/metricas');
+const registrosPostHog = require('./game/posthog-logs');
 
 const PUERTO = process.env.PORT || 3000;
 const PRODUCCION = process.env.NODE_ENV === 'production';
@@ -29,6 +30,18 @@ const MAX_SALAS = Number(process.env.MAX_SALAS) || 300;          // mesas abiert
 const LARGO_CODIGO = 5;
 // Dominios extra que pueden conectarse (ej. "https://conquian.midominio.com"), separados por coma
 const ORIGENES_EXTRA = (process.env.ALLOWED_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
+const POSTHOG_CONFIG = {
+  key: process.env.POSTHOG_KEY || '',
+  host: process.env.POSTHOG_HOST || '',
+  development: !PRODUCCION,
+};
+const POSTHOG_CSP_SOURCES = (() => {
+  try {
+    const host = new URL(POSTHOG_CONFIG.host);
+    const baseDomain = host.hostname.split('.').slice(-2).join('.');
+    return [host.origin, `https://*.${baseDomain}`];
+  } catch { return []; }
+})();
 
 // ---------- Errores que sí se le pueden mostrar al jugador ----------
 // (cualquier otro error se reporta como genérico, sin detalles internos)
@@ -69,10 +82,11 @@ app.use((req, res, next) => {
   }
   res.setHeader('Content-Security-Policy', [
     "default-src 'self'",
-    "script-src 'self'",
+    ["script-src 'self'", ...POSTHOG_CSP_SOURCES].join(' '),
     "style-src 'self' 'unsafe-inline'",          // la página usa estilos en línea para acomodar cartas
     "img-src 'self' data: blob:",                 // selfies (data:) y vista previa (blob:)
-    "connect-src 'self'",
+    ["connect-src 'self'", POSTHOG_CSP_SOURCES[0]].filter(Boolean).join(' '),
+    "worker-src 'self' blob:",
     "font-src 'self'",
     "object-src 'none'",
     "base-uri 'none'",
@@ -89,6 +103,12 @@ app.use((req, res, next) => {
 });
 
 const server = http.createServer(app);
+
+// Configuración pública que necesita el navegador; las credenciales privadas no se exponen aquí.
+app.get('/posthog-config.js', (_req, res) => {
+  res.type('application/javascript').set('Cache-Control', 'no-store');
+  res.send(`window.POSTHOG_CONFIG = ${JSON.stringify(POSTHOG_CONFIG)};`);
+});
 
 // Solo la propia página (o los dominios de ALLOWED_ORIGINS) puede conectarse al juego
 function origenPermitido(req) {
@@ -329,6 +349,11 @@ function repartir(sala) {
   sala.propuesta = null;
   for (const id of activos) cobrar(sala, id);
   metricaJugadores(sala, activos, 'partida_iniciada', datosMano(sala));
+  registrosPostHog.info('game_hand_started', {
+    active_players: activos.length,
+    hand_number: sala.numMano,
+    scenario: sala.escenario || 'default',
+  });
 }
 
 // Lo que ve cada jugador: SOLO ids públicos y SOLO sus propias cartas
@@ -458,6 +483,11 @@ io.on('connection', (socket) => {
       sala.hostId = j.id;
       salas.set(sala.codigo, sala);
       metricas.capturar(socket.data.visitante, 'sala_creada', { apuesta, regla_subir: sala.reglas.subirConFiguras, creditos: j.inicial });
+      registrosPostHog.info('game_table_created', {
+        bet: apuesta,
+        raised_bet_rule_enabled: sala.reglas.subirConFiguras,
+        player_count: sala.jugadores.length,
+      });
       programarBorrado(sala, 12 * 60 * 60 * 1000);   // ninguna mesa vive más de 12 horas
       emitirEstado(sala);
       return { codigo: sala.codigo };
@@ -611,7 +641,10 @@ process.on('uncaughtException', (err) => console.error('Error no controlado:', e
 process.on('unhandledRejection', (err) => console.error('Promesa rechazada:', err));
 
 if (require.main === module) {
-  server.listen(PUERTO, () => console.log(`🃏 Conquián listo en http://localhost:${PUERTO}`));
+  server.listen(PUERTO, () => {
+    console.log(`🃏 Conquián listo en http://localhost:${PUERTO}`);
+    registrosPostHog.info('game_server_started', { environment: process.env.NODE_ENV || 'development' });
+  });
 }
 
 module.exports = { server, _prueba: { votar, procesarEventos, cobrar, finalizar, origenPermitido } };

@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "express": "^4.21.2",
+    "posthog-js": "^1.455.4",
+    "posthog-node": "^6.2.0",
     "socket.io": "^4.8.1"
   }
 }
