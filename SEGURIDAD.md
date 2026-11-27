@@ -20,6 +20,7 @@ Resumen de la revisión de seguridad y de cómo mantener la app segura.
   - Las selfies y los nombres solo viven en la memoria del servidor; no hay base de datos.
   - Solo los ve la gente de tu mesa.
   - Se borran al cerrar la mesa, cuando un jugador sale antes de repartir, o cuando la mesa se borra: a los 30 minutos sin nadie conectado, o a las 12 horas como máximo.
+- **Chat:** cada mensaje se limpia (máximo 200 caracteres, sin caracteres invisibles), hay un límite de mensajes seguidos por persona, y en pantalla se muestran siempre como texto, nunca como código (aunque alguien escriba `<script>`, sale tal cual). Solo lo ven los de la mesa, se guardan los últimos 50 y se borran junto con la mesa.
 - **El barajeo usa números aleatorios seguros** del sistema, que no se pueden predecir.
 - **Dinero:** el juego no procesa ni guarda dinero real; solo calcula las cuentas. La pantalla de inicio avisa que es para mayores de 18 años.
 

@@ -53,6 +53,8 @@ const limiteCrearSala = limitador(5, 1 / 60);     // por IP: 5 mesas seguidas, l
 const limiteIntentosCodigo = limitador(10, 1 / 30); // por IP: 10 códigos fallidos, luego 1 cada 30 s
 const limiteFotos = limitador(5, 1 / 20);         // por conexión: cambios de selfie
 const limiteConexiones = limitador(30, 1);         // por IP: conexiones nuevas
+const limiteChat = limitador(6, 0.5);              // por conexión: 6 mensajes seguidos, luego 1 cada 2 s
+const MAX_HISTORIAL_CHAT = 50;
 
 const app = express();
 app.disable('x-powered-by');
@@ -347,6 +349,7 @@ function sentar(socket, sala, { nombre, llave, foto, creditos }) {
   clearTimeout(sala.borrar);
   socket.join(sala.codigo);
   emitirFotos(sala);
+  socket.emit('chatHistorial', sala.chat || []);
   return j;
 }
 
@@ -392,6 +395,7 @@ io.on('connection', (socket) => {
         jugadores: [],
         mano: null,
         resultado: null,
+        chat: [],
         creada: Date.now(),
       };
       const j = sentar(socket, sala, datos);
@@ -487,6 +491,23 @@ io.on('connection', (socket) => {
     if (!j || sala.final) return;
     j.foto = fotoValida(foto) ? foto : null;
     emitirFotos(sala);
+  });
+
+  // ---------- Chat de la mesa ----------
+  // Solo texto (se muestra con textContent en el navegador, nunca como HTML), máximo 200 letras,
+  // con límite de velocidad. Solo lo reciben los de la mesa y se borra al borrarse la mesa.
+  socket.on('chat', (texto, cb) => {
+    const responderChat = (r) => { if (typeof cb === 'function') cb(r); };
+    const sala = salas.get(socket.data.sala);
+    const j = sala && jugadorDe(sala, socket.data.id);
+    if (!j) return responderChat({ error: 'No estás en una mesa' });
+    if (!limiteChat(socket.id)) return responderChat({ error: 'Espera un poquito antes de mandar otro mensaje' });
+    const limpio = String(typeof texto === 'string' ? texto : '').replace(/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200);
+    if (!limpio) return responderChat({ error: 'Mensaje vacío' });
+    const msg = { id: crypto.randomBytes(6).toString('base64url'), de: j.id, nombre: j.nombre, texto: limpio, t: Date.now() };
+    sala.chat = [...(sala.chat || []), msg].slice(-MAX_HISTORIAL_CHAT);
+    io.to(sala.codigo).emit('chat', msg);
+    responderChat({ ok: true });
   });
 
   socket.on('escenario', (nombre) => {

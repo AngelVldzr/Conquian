@@ -44,10 +44,12 @@ Juego de Conquián en línea con baraja española (40 cartas), vista en primera 
 - **Acomodar:** arrastra una carta directo sobre una jugada de la mesa (tuya o de otro). Si no entra, regresa volando.
 - **Tirar:** toca la carta y **Tirar**, o arrástrala a los descartes.
 - **Aviso de turno:** un letrero que late te dice cuándo te toca voltear, decidir o pagar, y al pagar sale "✅ Ya pagaste". En el cambio inicial sale "✅ Ya elegiste" y la carta dice para quién es.
-- **Marcador:** cuántas cartas llevas en la mesa de las 9 (y las de cada rival). Tus jugadas salen primero en la mesa.
+- **Marcador:** cuántas cartas llevas en la mesa de las 9 (y las de cada rival).
+- **Jugadas de cada quien:** las de cada rival salen en un cuadro arriba de su nombre; las tuyas, en la mesa entre el mazo y los descartes ("Tus jugadas").
+- **Chat:** en celular, el botón 💬 de arriba abre el chat (con frases rápidas como "🏁 ¿Cerramos?"); el número rojo son los mensajes sin leer. En PC el chat está siempre a la derecha. Cuando alguien escribe, le sale un globito arriba de la cabeza unos segundos. Los mensajes solo los ve la mesa y se borran cuando se cierra.
 - **Pistas doradas:** las cartas de tu mano que pueden formar o completar una jugada brillan.
 - **Ordenar (celular y PC):** el botón junto a tu mano acomoda tus cartas: el 1er toque **por palo**, el 2º **por posibles jugadas** (primero tercias y corridas completas, luego las que casi lo son).
-- **Menú ☰:** escenario, cambiar tu cara e historial de la mano.
+- **Menú ☰** (en celular solo el ícono): escenario, cambiar tu cara e historial de la mano.
 
 ## Créditos y cuentas al final
 

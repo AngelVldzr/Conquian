@@ -406,18 +406,39 @@ function renderRivales() {
     } else {
       cuerpo = `<img class="cuerpo" src="escenarios/${e.id}/jugador${s.img}.png" style="${pos(caja)};${estilo}${lugar === 'centro' ? ';transform:scaleX(-1)' : ''}" alt="">`;
     }
+    const susJugadas = (m?.jugadas || []).filter((jg) => jg.duenio === id);
+    const globo = (globos[id]?.hasta || 0) > Date.now();
+    const globoCara = pose ? pose.cara : cara;
     return `<div class="asiento ${lugar} ${turno ? 'turno' : ''} ${tipoPose ? (pose ? 'con-pose' : tipoPose === 'baja' ? 'bajando' : '') : ''}" data-id="${id}">
       ${cuerpo}
       ${fotos[id] ? `<div class="cara" style="${caraUsar}"><img src="${fotos[id]}" alt=""></div>` : ''}
-      <div class="placa" style="left:${centroX}%;top:${s.atras ? pctY(e, caja[1]) + '%' : 'calc(var(--y-mesa) - 1%)'}">
-        <span class="nom">${esc(j.nombre)}</span><span class="mon">${monedasHTML(j.monedas, 3)}${j.monedas}</span><span>🂠 ${info ? info.cartas : 0}</span>${info?.activo ? marcadorHTML(id, true) : ''}
-        ${badge ? `<span class="badge">${badge}</span>` : ''}${!j.conectado ? '<span class="badge rojo">Sin conexión</span>' : ''}
+      <div class="info-rival ${lugar}" style="left:${centroX}%;top:${s.atras ? pctY(e, caja[1]) + '%' : 'calc(var(--y-mesa) - 1%)'}">
+        ${susJugadas.length ? `<div class="zona-jugadas">${susJugadas.map(jugadaHTML).join('')}</div>` : ''}
+        <div class="placa">
+          <span class="nom">${esc(j.nombre)}</span><span class="mon">${monedasHTML(j.monedas, 3)}${j.monedas}</span><span>🂠 ${info ? info.cartas : 0}</span>${info?.activo ? marcadorHTML(id, true) : ''}
+          ${badge ? `<span class="badge">${badge}</span>` : ''}${!j.conectado ? '<span class="badge rojo">Sin conexión</span>' : ''}
+        </div>
       </div>
+      ${globo ? `<div class="burbuja" style="left:${pctX(e, globoCara[0] + globoCara[2] / 2)}%;top:${pctY(e, globoCara[1] - 6)}%"></div>` : ''}
     </div>`;
   });
   // asiento sin jugador: se queda el de la foto como "mirón"
   const vacio = otros.length === 1 ? `<div class="miron" style="left:${pctX(e, (J0.caja[0] + J0.caja[2]) / 2)}%;top:calc(var(--y-mesa) - 1%)">👀 Mirón</div>` : '';
   $('#asientos').innerHTML = vacio + html.join('');
+  // el texto de los globitos se pone como texto (nunca como HTML)
+  document.querySelectorAll('#asientos .asiento').forEach((a) => {
+    const b = a.querySelector('.burbuja');
+    if (!b) return;
+    b.textContent = globos[a.dataset.id]?.texto || '';
+    // que no se salga de la foto por los lados
+    // (con medidas de diseño, sin la animación de entrada)
+    const ancho = a.offsetWidth, izq = b.offsetLeft - b.offsetWidth / 2, der = izq + b.offsetWidth;
+    const mover = Math.max(0, 4 - izq) - Math.max(0, der - (ancho - 4));
+    if (mover) {
+      b.style.marginLeft = mover + 'px';
+      b.style.setProperty('--cola', `calc(50% - ${mover}px)`);
+    }
+  });
   $('#asientos').classList.toggle('con-miron', otros.length === 1);
   $('#asientos').classList.toggle('tres', otros.length >= 3);
   // el 4º jugador esperando
@@ -449,21 +470,9 @@ function renderCentro() {
       <div class="etq">${m.arriba.origen === 'mazo' ? 'Volteó' : 'Tiró'} ${esc(nombre(m.arriba.desde))}<br>Decide: <b>${esc(nombre(m.turno))}</b></div></div>` : ''}
   </div>`;
 
-  const ordenJugadas = [...m.jugadas].sort((a, b) => (b.duenio === estado.yo) - (a.duenio === estado.yo));
-  const jugadas = ordenJugadas.length
-    ? ordenJugadas.map((jg) => {
-        const mia = jg.duenio === estado.yo;
-        const tomadas = deMesa.filter((d) => d.jugada === jg.id).map((d) => d.cartaId);
-        const restantes = jg.cartas.filter((c) => !tomadas.includes(c.id));
-        const valida = mia && !tomadas.length && puedoArmar() && enBandeja.length > 0 && tipoJugada([...jg.cartas, ...enBandeja]) === jg.tipo;
-        const echable = !mia && entra(jg, cartaParaEchar());
-        const recortable = mia && puedoArmar();
-        const dueno = mia ? 'Tu' : 'De ' + esc(nombreProp(jg.duenio));
-        return `<div class="jugada ${valida ? 'valida' : ''} ${echable ? 'echable' : ''} ${mia ? 'mia' : ''} ${recortable ? 'recortable' : ''}" data-jugada="${jg.id}">
-          <div class="dueno">${echable ? '🎯 ¡Échasela!' : `${dueno} · ${jg.tipo}`}</div>
-          <div class="cartas">${restantes.map((c) => cartaHTML(c, 'mini' + (c.echadaPor ? ' ajena' : ''), recortable ? 'data-recorte="1"' : '')).join('')}</div></div>`;
-      }).join('')
-    : '';
+  // En la mesa solo van TUS jugadas; las de cada rival van arriba de su nombre
+  const mias = m.jugadas.filter((jg) => jg.duenio === estado.yo);
+  const jugadas = mias.length ? `<div class="tit-jugadas">Tus jugadas</div>${mias.map(jugadaHTML).join('')}` : '';
 
   const puedoTirar = m.fase === 'descartar' && m.turno === estado.yo;
   const colDesc = `<div class="fila">
@@ -471,7 +480,7 @@ function renderCentro() {
       ${m.esperando ? `<div class="meta4">${esc(nombreProp(m.esperando))}: ${8 - m.faltanParaEntrar}/8</div>` : '<div class="etq">Descartes</div>'}</div>
   </div>`;
 
-  $('#sobre-mesa').innerHTML = `<div class="zona-mazo">${colMazo}</div><div id="jugadas">${jugadas}</div><div class="zona-desc">${colDesc}</div>`;
+  $('#sobre-mesa').innerHTML = `<div class="zona-mazo">${colMazo}</div><div id="jugadas" class="${mias.length ? 'con-jugadas' : ''}">${jugadas}</div><div class="zona-desc">${colDesc}</div>`;
 }
 
 // Pistas doradas: cartas de tu mano que pueden formar o completar una jugada
@@ -1067,7 +1076,7 @@ function lugarDe(el) {
 
 function capturarCartas() {
   const r = {};
-  document.querySelectorAll('#sobre-mesa .carta[data-id], #abanico .carta[data-id], #bandeja .carta[data-id]').forEach((el) => {
+  document.querySelectorAll('#sobre-mesa .carta[data-id], #asientos .carta[data-id], #abanico .carta[data-id], #bandeja .carta[data-id]').forEach((el) => {
     r[el.dataset.id] = { rect: el.getBoundingClientRect(), lugar: lugarDe(el) };
   });
   return r;
@@ -1134,7 +1143,7 @@ function volar(el, desde, ms = 430, retraso = 0) {
 }
 
 function volarCartas(antes) {
-  document.querySelectorAll('#sobre-mesa .carta[data-id], #bandeja .carta[data-id]').forEach((el) => {
+  document.querySelectorAll('#sobre-mesa .carta[data-id], #asientos .carta[data-id], #bandeja .carta[data-id]').forEach((el) => {
     const id = el.dataset.id;
     const lugar = lugarDe(el);
     const viejo = antes[id];
@@ -1291,3 +1300,91 @@ function renderAvisoTurno() {
   el.textContent = txt;
   el.className = txt ? 'visible' : '';
 }
+
+// =============================================================
+//  Una jugada en la mesa (tuya o de un rival)
+// =============================================================
+function jugadaHTML(jg) {
+  const m = estado.mano;
+  const enBandeja = cartasBandeja();
+  const mia = jg.duenio === estado.yo;
+  const tomadas = deMesa.filter((d) => d.jugada === jg.id).map((d) => d.cartaId);
+  const restantes = jg.cartas.filter((c) => !tomadas.includes(c.id));
+  const valida = mia && !tomadas.length && puedoArmar() && enBandeja.length > 0 && tipoJugada([...jg.cartas, ...enBandeja]) === jg.tipo;
+  const echable = !mia && m && entra(jg, cartaParaEchar());
+  const recortable = mia && puedoArmar();
+  return `<div class="jugada ${valida ? 'valida' : ''} ${echable ? 'echable' : ''} ${mia ? 'mia' : ''} ${recortable ? 'recortable' : ''}" data-jugada="${jg.id}">
+    ${echable ? '<div class="dueno">🎯 ¡Échasela!</div>' : ''}
+    <div class="cartas">${restantes.map((c) => cartaHTML(c, 'mini' + (c.echadaPor ? ' ajena' : ''), recortable ? 'data-recorte="1"' : '')).join('')}</div></div>`;
+}
+
+// =============================================================
+//  CHAT de la mesa (todo se muestra como texto, nunca como HTML)
+// =============================================================
+const globos = {};            // id -> { texto, hasta }
+let mensajesChat = [];
+let sinLeer = 0;
+const chatAbierto = () => $('#chat').classList.contains('abierto') || window.matchMedia('(min-aspect-ratio: 1/1)').matches;
+
+function pintarMensaje(msg) {
+  const li = document.createElement('div');
+  const mio = msg.de === estado?.yo;
+  li.className = 'msg' + (mio ? ' yo' : '');
+  const quien = document.createElement('b');
+  quien.textContent = mio ? 'Tú' : msg.nombre;
+  const texto = document.createElement('span');
+  texto.textContent = msg.texto;
+  li.append(quien, texto);
+  $('#chat-mensajes').appendChild(li);
+}
+function pintarChat() {
+  const caja = $('#chat-mensajes');
+  caja.textContent = '';
+  if (!mensajesChat.length) {
+    const v = document.createElement('div'); v.className = 'msg sis'; v.textContent = 'Aquí pueden platicar los de la mesa';
+    caja.appendChild(v);
+  }
+  mensajesChat.forEach(pintarMensaje);
+  caja.scrollTop = caja.scrollHeight;
+  actualizarSinLeer();
+}
+function actualizarSinLeer() {
+  const b = $('#btn-chat i');
+  b.textContent = sinLeer > 9 ? '9+' : String(sinLeer);
+  b.classList.toggle('oculto', !sinLeer);
+}
+
+socket.on('chatHistorial', (lista) => { mensajesChat = Array.isArray(lista) ? lista : []; pintarChat(); });
+socket.on('chat', (msg) => {
+  if (!msg || typeof msg.texto !== 'string') return;
+  mensajesChat = [...mensajesChat, msg].slice(-50);
+  pintarChat();
+  if (msg.de !== estado?.yo) {
+    if (!chatAbierto()) { sinLeer++; actualizarSinLeer(); }
+    // globito arriba de la cabeza de quien escribió (5 segundos)
+    globos[msg.de] = { texto: msg.texto.length > 60 ? msg.texto.slice(0, 57) + '…' : msg.texto, hasta: Date.now() + 5000 };
+    if (estado) renderRivales();
+    setTimeout(() => { if (estado) renderRivales(); }, 5100);
+  }
+});
+
+function mandarChat(texto) {
+  texto = String(texto || '').trim();
+  if (!texto) return;
+  socket.emit('chat', texto.slice(0, 200), (r) => { if (r && r.error) toast(r.error); });
+}
+$('#chat-form').addEventListener('submit', (ev) => {
+  ev.preventDefault();
+  mandarChat($('#chat-texto').value);
+  $('#chat-texto').value = '';
+});
+document.querySelectorAll('#chat-rapidas [data-frase]').forEach((b) => { b.onclick = () => mandarChat(b.dataset.frase); });
+$('#btn-chat').onclick = () => {
+  $('#chat').classList.add('abierto');
+  $('#chat-velo').classList.remove('oculto');
+  sinLeer = 0; actualizarSinLeer();
+  $('#chat-mensajes').scrollTop = $('#chat-mensajes').scrollHeight;
+};
+const cerrarChat = () => { $('#chat').classList.remove('abierto'); $('#chat-velo').classList.add('oculto'); };
+$('#chat-cerrar').onclick = cerrarChat;
+$('#chat-velo').onclick = cerrarChat;

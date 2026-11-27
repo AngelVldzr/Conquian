@@ -354,3 +354,64 @@ input, select { padding: 10px 12px; border-radius: 10px; border: 1px solid #6b5a
 #btn-ordenar small { font-weight: 400; font-size: 10px; opacity: .85; }
 #btn-ordenar:active { transform: scale(.95); }
 .nota.legal { font-size: .75rem; opacity: .65; }
+
+/* =============================================================
+   Jugadas de cada rival (arriba de su nombre) y cartas más grandes
+   ============================================================= */
+:root { --mini-w: calc(var(--ew) * .088); }
+.info-rival { position: absolute; z-index: 5; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; gap: 3px;
+  width: max-content; max-width: 50%; pointer-events: auto; }
+.info-rival.centro { max-width: 76%; }
+.info-rival.centro .zona-jugadas { flex-wrap: nowrap; --mini-w: calc(var(--ew) * .066); }
+.info-rival .placa { position: static; transform: none; }
+.zona-jugadas { display: flex; flex-wrap: wrap; gap: 3px 6px; justify-content: center; background: rgba(10,8,6,.55);
+  border: 1px solid rgba(255,255,255,.18); border-radius: 10px; padding: 4px; backdrop-filter: blur(2px); }
+.zona-jugadas .jugada { background: none; padding: 0; border-radius: 6px; }
+.jugada .carta + .carta { margin-left: calc(var(--mini-w) * -.55); }
+.jugada .dueno { font-size: max(9px, 1.8cqw); text-align: center; }
+#jugadas.con-jugadas { background: rgba(233,184,36,.18); border: 1px solid rgba(233,184,36,.5); border-radius: 10px; padding: 3px 5px 5px; align-items: flex-end; }
+.tit-jugadas { font-size: max(9px, 2cqw); opacity: .9; align-self: flex-start; white-space: nowrap; margin-right: 2px; }
+#jugadas .jugada.mia { background: none; }
+
+/* Globito del chat arriba de la cabeza */
+.burbuja { position: absolute; z-index: 9; transform: translate(-50%, -100%); background: #fff; color: #222; border-radius: 14px; padding: 5px 10px;
+  font-size: max(12px, 3cqw); font-weight: 600; max-width: 55%; width: max-content; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,.5);
+  animation: globo .25s ease; overflow-wrap: anywhere; }
+.burbuja::after { content: ""; position: absolute; left: var(--cola, 50%); bottom: -7px; transform: translateX(-50%); border: 7px solid transparent; border-top-color: #fff; border-bottom: 0; }
+@keyframes globo { from { opacity: 0; transform: translate(-50%, -80%) scale(.8); } }
+
+/* =============================================================
+   Chat
+   ============================================================= */
+#btn-chat { position: fixed; z-index: 15; top: calc(env(safe-area-inset-top) + 8px); right: 62px; background: #2e7d4f; border-color: #9be7b0; font-size: 16px; padding: 5px 11px; }
+#btn-chat i { position: absolute; top: -6px; right: -6px; background: #e53935; color: #fff; font-style: normal; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 0 5px; }
+#chat-velo { position: fixed; inset: 0; z-index: 29; background: rgba(0,0,0,.45); }
+#chat { position: fixed; z-index: 30; left: 0; right: 0; bottom: 0; height: min(470px, 62dvh); background: rgba(18,12,8,.96);
+  border: 1px solid rgba(233,184,36,.6); border-radius: 18px 18px 0 0; display: flex; flex-direction: column;
+  transform: translateY(105%); transition: transform .25s ease; }
+#chat.abierto { transform: none; }
+.chat-cab { display: flex; justify-content: space-between; align-items: center; padding: 9px 12px; border-bottom: 1px solid rgba(255,255,255,.12); font-weight: 700; color: var(--oro); }
+#chat-cerrar { background: none; border: 0; color: #fff; font-size: 20px; cursor: pointer; }
+#chat-mensajes { flex: 1; overflow-y: auto; padding: 8px 10px; display: flex; flex-direction: column; gap: 7px; }
+#chat-mensajes .msg { max-width: 82%; padding: 6px 10px; border-radius: 12px; font-size: 14px; line-height: 1.3; background: rgba(255,255,255,.1); overflow-wrap: anywhere; }
+#chat-mensajes .msg b { display: block; font-size: 11px; color: var(--oro); }
+#chat-mensajes .msg.yo { align-self: flex-end; background: #2e7d4f; }
+#chat-mensajes .msg.sis { align-self: center; background: none; font-size: 12px; opacity: .7; font-style: italic; }
+#chat-rapidas { display: flex; gap: 6px; flex-wrap: wrap; padding: 6px 10px; }
+#chat-rapidas button { background: rgba(233,184,36,.18); border: 1px solid rgba(233,184,36,.5); color: #fff; border-radius: 999px; padding: 4px 9px; font-size: 12px; cursor: pointer; }
+#chat-form { display: flex; gap: 6px; padding: 8px 10px calc(env(safe-area-inset-bottom) + 10px); }
+#chat-form input { flex: 1; min-width: 0; font-size: 16px; }
+#chat-form button { background: var(--oro); color: #3a2410; border: 0; border-radius: 10px; padding: 0 14px; font-weight: 700; cursor: pointer; }
+/* Celular: el menú solo con ícono para que quepa el botón del chat */
+@media (max-aspect-ratio: 1/1) {
+  #menu summary.chip { font-size: 0; padding: 5px 11px; }
+  #menu summary.chip::before { content: "☰"; font-size: 16px; }
+  #btn-chat { right: 54px; }
+  #mi-placa { max-width: calc(100vw - 220px); left: calc(50% - 20px); }
+}
+/* PC: el chat siempre abierto a la derecha, arriba de los botones */
+@media (min-aspect-ratio: 1/1) {
+  #btn-chat, #chat-velo, #chat-cerrar { display: none !important; }
+  #chat { left: auto; right: 16px; bottom: 150px; top: auto; width: min(340px, calc((100vw - var(--ew)) / 2 - 32px)); height: min(380px, calc(100dvh - 400px));
+    min-height: 220px; border-radius: 14px; transform: none; transition: none; }
+}

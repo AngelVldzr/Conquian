@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#1b120c">
   <title>Conquián con los cuates</title>
-  <link rel="stylesheet" href="style.css?v=20">
+  <link rel="stylesheet" href="style.css?v=21">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🃏</text></svg>">
 </head>
 <body>
@@ -91,6 +91,21 @@
     <div id="arriba-izq">
       <button id="btn-codigo" class="chip" title="Copiar invitación"></button>
     </div>
+    <button id="btn-chat" class="chip" type="button" aria-label="Chat">💬<i class="oculto">0</i></button>
+    <div id="chat-velo" class="oculto"></div>
+    <section id="chat" aria-label="Chat de la mesa">
+      <div class="chat-cab">💬 Chat de la mesa <button id="chat-cerrar" type="button" aria-label="Cerrar chat">✕</button></div>
+      <div id="chat-mensajes"></div>
+      <div id="chat-rapidas">
+        <button type="button" data-frase="👋 ¡Qué onda!">👋 ¡Qué onda!</button>
+        <button type="button" data-frase="🏁 ¿Cerramos?">🏁 ¿Cerramos?</button>
+        <button type="button" data-frase="🔁 Una más">🔁 Una más</button>
+        <button type="button" data-frase="👏 Bien jugado">👏 Bien jugado</button>
+        <button type="button" data-frase="⏳ Ya juega">⏳ Ya juega</button>
+        <button type="button" data-frase="😂">😂</button>
+      </div>
+      <form id="chat-form" autocomplete="off"><input id="chat-texto" maxlength="200" placeholder="Escribe un mensaje…" enterkeyhint="send"><button type="submit">Enviar</button></form>
+    </section>
     <details id="menu">
       <summary class="chip">☰ Menú</summary>
       <div class="menu-panel">
@@ -108,8 +123,8 @@
   <div id="toast"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="cartas.js?v=20"></script>
-  <script src="escenarios.js?v=20"></script>
-  <script src="app.js?v=20"></script>
+  <script src="cartas.js?v=21"></script>
+  <script src="escenarios.js?v=21"></script>
+  <script src="app.js?v=21"></script>
 </body>
 </html>
